@@ -1,0 +1,43 @@
+Exploring the Data
+
+I created and ran all of my queries in BigQuery.
+
+***What are the top 3 crimes with arrests made in each year (2001-2023)?
+
+
+
+SELECT *,
+FROM (SELECT year, primary_type, description, COUNT(*) AS num_of_incidents,
+      ROW_NUMBER() OVER (PARTITION BY year ORDER BY COUNT(*) DESC) AS crime_rank
+      FROM bigquery-public-data.chicago_crime.crime
+      WHERE arrest = TRUE
+      GROUP BY year, primary_type, description
+      ORDER BY year, num_of_incidents DESC, primary_type) AS t
+WHERE crime_rank<=3;
+
+***Which month generally has the greatest number of reported incidents?
+
+SQL query
+
+SELECT EXTRACT(MONTH FROM date) AS month, ROUND(COUNT(*)/COUNT(DISTINCT year)) AS avg_num_of_incidents
+FROM bigquery-public-data.chicago_crime.crime
+WHERE year < 2023
+GROUP BY month
+ORDER BY avg_num_of_incidents DESC
+LIMIT 1;
+ 
+The month of July had the greatest number of reported incidents each year, averaging 32,586 incidents every July.
+ 
+***Which categories of crime have the greatest percent increase from 2021-2022?
+ 
+SELECT
+  primary_type,description,
+  COUNTIF(year = 2021) AS arrests_2021,
+  COUNTIF(year = 2022) AS arrests_2022,
+  ROUND((COUNTIF(year = 2022) - COUNTIF(year = 2021)) / COUNTIF(year = 2021)*100,2) AS pct_change_2021_to_2022
+FROM bigquery-public-data.chicago_crime.crime
+WHERE arrest = TRUE
+  AND year IN (2021, 2022)
+GROUP BY primary_type, description
+HAVING COUNTIF(year = 2021) > 100
+ORDER BY (COUNTIF(year = 2022) - COUNTIF(year = 2021)) / COUNTIF(year = 2021) DESC
